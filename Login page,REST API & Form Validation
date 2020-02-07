@@ -1,0 +1,228 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:encrypt/encrypt.dart' as enc;
+import 'package:ourflutter_app/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'register.dart';
+
+class Login extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      title: 'Flutter Form Demo',
+      theme: new ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: new LoginPage(title: 'Flutter Form Demo'),
+    );
+  }
+}
+
+class LoginPage extends StatefulWidget {
+  LoginPage({Key key, this.title}) : super(key: key);
+  final String title;
+
+  @override
+  _LoginPageState createState() => new _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
+  List<String> _colors = <String>['', 'red', 'green', 'blue', 'orange'];
+  SharedPreferences sharedPreferences;
+  var passsword = TextEditingController();
+  var userrname = TextEditingController();
+  String sta = '';
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+  }
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      key: _scaffoldKey,
+      appBar: new AppBar(
+        title: new Text(widget.title),
+      ),
+      body: new SafeArea(
+          top: false,
+          bottom: false,
+          child: new Form(
+              key: _formKey,
+              autovalidate: true,
+              child: new ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                children: <Widget>[
+                  new TextFormField(
+                    controller: userrname,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.person),
+                      hintText: 'Username',
+                      labelText: 'Name',
+                    ),
+                  ),
+                  TextFormField(
+                    controller: passsword,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.person),
+                      hintText: 'Password',
+                      labelText: 'key',
+                    ),
+                    obscureText: true,
+                  ),
+                  new Container(
+                      padding: const EdgeInsets.only(left: 40.0, top: 20.0),
+                      child: new RaisedButton(
+                        child: const Text('Login'),
+                        onPressed: () async {
+                          var username_value = userrname.text.trim();
+                          var pass_value = passsword.text.trim();
+
+                          print(username_value);
+                          print(pass_value);
+
+                          if (username_value == "" && pass_value == "") {
+                            _scaffoldKey.currentState.showSnackBar(new SnackBar(
+                                content: new Text("Please fill every field")));
+                          } else {
+                            var items = {
+                              "username": username_value,
+                              "password": pass_value,
+                            };
+                            var transfer = await http.post(
+                                "http://basic.chainuniverse.com/api/UsersAPI/PostUserLogin",
+                                body: jsonEncode(items),
+                                headers: {
+                                  "Content-Type":
+                                      "application/json; charset=utf-8"
+                                });
+
+                            if (transfer.statusCode >= 200 &&
+                                transfer.statusCode <= 250) {
+                              if(transfer.body == '{"message":"Login sucess"}'){
+                                SharedPreferences status = await SharedPreferences.getInstance();
+                                String loginstatus = 'loggedin';
+                                await status.setString('status', loginstatus);
+                              }
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => HomePage()),
+                              );
+                            }
+
+
+                          }
+                        },
+                      )),
+                  Container(
+                    padding: const EdgeInsets.only(left: 30.0, top: 20.0),
+                    child: RaisedButton(
+                        child: const Text('Register'),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => Register()),
+                          );
+                        }),
+                  ),
+                ],
+              ))),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+#returning to regiter page
+
+
+import 'package:flutter/material.dart';
+import 'package:ourflutter_app/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+
+
+  @override
+  Widget build(BuildContext context) {
+      return MaterialApp(
+        home: Main(),
+      );
+  }
+}
+
+class Main extends StatefulWidget {
+  @override
+  _MainState createState() => _MainState();
+}
+
+class _MainState extends State<Main> {
+  SharedPreferences sharedPreferences;
+  String st = '';
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    checkloginStatus();
+  }
+
+  checkloginStatus() async{
+    sharedPreferences = await SharedPreferences.getInstance();
+    st = await sharedPreferences.getString('status').toString();
+    print("Hello ${sharedPreferences.getString('status')}");
+  }
+  @override
+  Widget build(BuildContext context) {
+    if(st == null){
+      return Login();
+    }
+    else {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Column(
+          children: <Widget>[
+            Container(
+              child: Center(
+                child: Text('Hello'),
+              ),
+            ),
+            Container(
+              child: RaisedButton(
+                child: Text('Log out'),
+                onPressed: () async{
+                  SharedPreferences preferences = await SharedPreferences.getInstance();
+                  preferences.clear();
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Login())
+                  );
+
+                },
+              ),
+            )
+          ],
+        ),
+      );
+    }
+  }
+}
