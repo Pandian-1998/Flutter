@@ -1,0 +1,180 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:encrypt/encrypt.dart' as enc;
+import 'login.dart';
+
+class Register extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      title: 'Flutter Form Demo',
+      theme: new ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: new MyHomePage(title: 'Flutter Form Demo'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  MyHomePage({Key key, this.title}) : super(key: key);
+  final String title;
+
+  @override
+  _MyHomePageState createState() => new _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
+
+//  String _color = '';
+  var email = TextEditingController();
+  var phoneNumber = TextEditingController();
+  var password = TextEditingController();
+  var username = TextEditingController();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      key: _scaffoldKey,
+      appBar: new AppBar(
+        title: new Text(widget.title),
+      ),
+      body: new SafeArea(
+          top: false,
+          bottom: false,
+          child: new Form(
+              key: _formKey,
+              autovalidate: true,
+              child: new ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                children: <Widget>[
+                  new TextFormField(
+                    controller: username,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.person),
+                      hintText: 'Username',
+                      labelText: 'Name',
+                    ),
+                  ),
+                  new TextFormField(
+                    controller: email,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.email),
+                      hintText: 'Email',
+                      labelText: 'email',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  new TextFormField(
+                    controller: phoneNumber,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.phone),
+                      hintText: 'Enter a phone number',
+                      labelText: 'Phone',
+                    ),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      WhitelistingTextInputFormatter.digitsOnly,
+                    ],
+                  ),
+                  new TextFormField(
+                    controller: password,
+                    decoration: const InputDecoration(
+                      icon: const Icon(Icons.lock),
+                      hintText: 'Enter a Password',
+                      labelText: 'password',
+                    ),
+                    obscureText: true,
+                  ),
+                  new Container(
+                      padding: const EdgeInsets.only(left: 40.0, top: 20.0),
+                      child: new RaisedButton(
+                        child: const Text('Submit'),
+                        onPressed: () async {
+                          var username_value = username.text.trim();
+                          var email_value = email.text.trim();
+                          var pass_value = password.text.trim();
+                          var phonee_value = phoneNumber.text.trim();
+                          final key = enc.Key.fromLength(32);
+                          final iv = enc.IV.fromLength(16);
+                          final encrypter = enc.Encrypter(enc.AES(key));
+                          final encrypted = encrypter.encrypt(pass_value, iv: iv);
+
+                          print(username_value);
+                          print(email_value);
+                          print(pass_value);
+                          print(phonee_value);
+                          if (username_value != "" &&
+                              email_value != "" &&
+                              pass_value != "") {
+                            bool emailValid = RegExp(
+                                    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                                .hasMatch(email_value);
+
+                            if (emailValid) {
+                              _scaffoldKey.currentState.showSnackBar(
+                                  new SnackBar(content: new Text("Please wait...")));
+                              var data = {
+                                "username": username_value,
+                                "email": email_value,
+                                "password": pass_value,
+                                "phoneNumber": phonee_value
+                              };
+                              var response = await http.post(
+                                  "http://basic.chainuniverse.com/api/UsersAPI/",
+                                  body: jsonEncode(data),
+                                  headers: {
+                                    "Content-Type":
+                                        "application/json; charset=utf-8"
+                                  });
+
+                              print(response.body);
+                              if (response.statusCode >= 200 &&
+                                  response.statusCode <= 250) {
+                                print('sucessfully registered');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => Login()),
+                                );
+                              } else {
+                                print("Please try again");
+                              }
+                            } else {
+                              _scaffoldKey.currentState.showSnackBar(
+                                  new SnackBar(
+                                      content: new Text("Check email")));
+                            }
+                          } else {
+                            _scaffoldKey.currentState.showSnackBar(
+                                new SnackBar(content: new Text("fill")));
+                          }
+                        },
+                      ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.only(left: 30.0, top: 20.0),
+                    child: RaisedButton(
+                        child: const Text('Login'),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => Login()),
+                          );
+                        }),
+                  ),
+                ],
+              ))),
+    );
+  }
+}
